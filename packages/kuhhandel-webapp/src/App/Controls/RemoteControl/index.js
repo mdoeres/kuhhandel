@@ -1,65 +1,31 @@
 import React, { Component } from 'react'
 import { Control } from 'kuhhandel-components'
-import Peer from 'simple-peer'
-import { QRCodeSVG } from 'qrcode.react'
 import './RemoteControl.css'
-
-const peerConfig = {
-  initiator: true,
-  trickle: true,
-  config: {
-    iceServers: [
-      {
-        urls: [
-          'stun:stun.l.google.com:19302',
-          'stun:stun1.l.google.com:19302',
-          'stun:stun2.l.google.com:19302',
-          'stun:stun3.l.google.com:19302',
-          'stun:stun4.l.google.com:19302'
-        ]
-      }
-    ],
-    iceCandidatePoolSize: 10
-  }
-}
 
 class Connect extends Component {
   render() {
-    const { link, connected, id } = this.props
-    const placeholder = `${id} ${connected ? '✅' : ' - ' + link}`
+    const { gameId, connected } = this.props
+    const placeholder = `Game ID: ${gameId}`
+    const remoteUrl = process.env.NODE_ENV === 'production' 
+      ? `https://kuhhandel-remote.onrender.com/remote?gameId=${gameId}`
+      : `http://localhost:3002/remote?gameId=${gameId}`
     
     return (
       <div className="connect-container">
+        <div className="game-id">
+          <label>Game ID:</label>
+          <div className="id">{gameId}</div>
+          <div className="status">{connected ? '✅ Connected' : '⏳ Waiting for connection...'}</div>
+        </div>
         <button 
           className="remote-button"
-          onClick={() => {
-            if (link) {
-              window.open(link, '_blank')
-            } else {
-              const remoteUrl = process.env.NODE_ENV === 'production' 
-                ? 'https://kuhhandel-remote.onrender.com/remote'
-                : 'http://localhost:3002'
-              window.open(remoteUrl, '_blank')
-            }
-          }}
+          onClick={() => window.open(remoteUrl, '_blank')}
           title="Open Remote Control in new tab"
         >
           Open Remote Control
         </button>
-        {link && link.length > 0 && (
-          <div className="qr-container">
-            <QRCodeSVG 
-              value={link}
-              size={200}
-              level="H"
-              includeMargin={true}
-              title="Scan to open remote control"
-            />
-            <p className="qr-hint">Scan QR code with your phone</p>
-          </div>
-        )}
         <form ref={f => this.form = f} onSubmit={this.onSubmit}>
-          <input className="connect" type="text" name="id" placeholder={placeholder} title={`Open ${link} in your smartphone`} />
+          <input className="connect" type="text" name="id" placeholder={placeholder} title="Game ID" />
         </form>
       </div>
     )
@@ -67,9 +33,8 @@ class Connect extends Component {
 
   onSubmit = async e => {
     e.preventDefault()
-    const id = this.form.id.value
-    const data = JSON.parse(atob(id.split('?connect=')[1]))
-    this.props.onSubmit(data)
+    const gameId = this.form.id.value
+    this.props.onSubmit(gameId)
     this.form.reset()
   }
 }
@@ -77,81 +42,71 @@ class Connect extends Component {
 class Remote extends Component {
   state = {
     connected: false,
-    link: '',
-    peer: new Peer(peerConfig)
+    gameId: Math.random().toString(36).substring(2, 8),
+    ws: null
   }
 
   componentDidMount() {
-    this.initPeer()
+    this.initWebSocket()
   }
 
-  componentWillReceiveProps(nextProps) {
-    this.onSendProps(nextProps)
+  componentWillUnmount() {
+    if (this.state.ws) {
+      this.state.ws.close()
+    }
   }
 
-  render() {
-    const { link, connected } = this.state
-    return <Connect
-      onSubmit={this.onConnect}
-      link={link}
-      connected={connected}
-      id={this.props.id}
-    />
-  }
+  initWebSocket = () => {
+    const { gameId } = this.state
+    const wsUrl = process.env.NODE_ENV === 'production'
+      ? `wss://kuhhandel-main.onrender.com/ws/${gameId}`
+      : `ws://localhost:3002/ws/${gameId}`
 
-  initPeer = () => {
-    const { peer } = this.state
-    peer.once('signal', this.onSignal)
-    peer.on('connect', () => {
-      console.log('Peer connected, sending initial props')
-      const gameState = {
-        ...this.props,
-        method: 'init',
-        payload: this.props
-      }
+    console.log('Creating WebSocket connection:', wsUrl)
+    const ws = new WebSocket(wsUrl)
+
+    ws.onopen = () => {
+      console.log('WebSocket connected')
+      this.setState({ connected: true })
+    }
+
+    ws.onmessage = (event) => {
+      console.log('Received data:', event.data)
       try {
-        peer.send(JSON.stringify(gameState))
-        this.setState({ connected: true })
-      } catch (err) {
-        console.error('Error sending initial props:', err)
-      }
-    })
-    peer.on('data', data => {
-      console.log('Received data from peer:', data)
-      try {
-        const parsedData = JSON.parse(data)
-        if (parsedData.method) {
-          this.onData(parsedData)
+        const data = JSON.parse(event.data)
+        if (data.method) {
+          this.onData(data)
         }
       } catch (err) {
         console.error('Error parsing received data:', err)
       }
-    })
-    peer.on('close', () => {
-      console.log('Peer connection closed, reinitializing')
-      this.setState({ link: '', connected: false, peer: new Peer(peerConfig) }, this.initPeer)
-    })
-    peer.on('error', err => {
-      console.error('Peer error:', err)
-      this.setState({ link: '', connected: false, peer: new Peer(peerConfig) }, this.initPeer)
-    })
+    }
+
+    ws.onclose = () => {
+      console.log('WebSocket connection closed')
+      this.setState({ connected: false, ws: null })
+    }
+
+    ws.onerror = (err) => {
+      console.error('WebSocket error:', err)
+      this.setState({ connected: false, ws: null })
+    }
+
+    this.setState({ ws })
   }
 
-  onConnect = data => {
-    console.log('Received connection data:', data)
-    try {
-      if (this.state.peer && !this.state.peer.destroyed) {
-        this.state.peer.signal(data)
-      } else {
-        console.log('Creating new peer for connection')
-        const newPeer = new Peer(peerConfig)
-        newPeer.signal(data)
-        this.setState({ peer: newPeer }, this.initPeer)
-      }
-    } catch (err) {
-      console.error('Error handling connection:', err)
-      this.setState({ link: '', connected: false, peer: new Peer(peerConfig) }, this.initPeer)
-    }
+  render() {
+    const { gameId, connected } = this.state
+    return <Connect
+      onSubmit={this.onConnect}
+      gameId={gameId}
+      connected={connected}
+    />
+  }
+
+  onConnect = gameId => {
+    console.log('Received game ID:', gameId)
+    this.setState({ gameId }, this.initWebSocket)
   }
 
   onData = data => {
@@ -160,25 +115,15 @@ class Remote extends Component {
   }
 
   onSendProps = props => {
-    if (this.state.peer && this.state.peer.connected) {
+    if (this.state.ws && this.state.ws.readyState === WebSocket.OPEN) {
       console.log('Sending updated props:', props)
       const gameState = {
         ...props,
         method: 'update',
         payload: props
       }
-      this.state.peer.send(JSON.stringify(gameState))
+      this.state.ws.send(JSON.stringify(gameState))
     }
-  }
-
-  onSignal = signalData => {
-    const host = process.env.NODE_ENV === 'production' 
-      ? 'kuhhandel-remote.onrender.com/remote' 
-      : window.location.host
-    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
-    const link = `${protocol}://${host}?signalData=${btoa(JSON.stringify(signalData))}`
-    console.log('Generated remote control link:', link)
-    this.setState({ link })
   }
 }
 
