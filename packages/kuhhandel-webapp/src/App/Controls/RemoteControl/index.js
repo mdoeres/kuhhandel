@@ -44,9 +44,19 @@ class Connect extends Component {
   onSubmit = async e => {
     e.preventDefault()
     const id = this.form.id.value
-    const data = JSON.parse(atob(id.split('?connect=')[1]))
-    this.props.onSubmit(data)
-    this.form.reset()
+    try {
+      const connectParam = id.split('?connect=')[1]
+      if (!connectParam) {
+        throw new Error('Invalid connection data')
+      }
+      const data = JSON.parse(atob(connectParam))
+      console.log('Parsed connection data:', data)
+      this.props.onSubmit(data)
+      this.form.reset()
+    } catch (err) {
+      console.error('Error parsing connection data:', err)
+      alert('Invalid connection data. Please try again.')
+    }
   }
 }
 
