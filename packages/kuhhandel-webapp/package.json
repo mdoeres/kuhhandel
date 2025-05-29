@@ -1,11 +1,11 @@
 {
   "name": "kuhhandel-webapp",
   "version": "1.0.0",
-  "description": "",
+  "description": "Kuhhandel webapp",
   "scripts": {
     "build": "nwb build-react-app",
     "clean": "nwb clean-app",
-    "start": "nwb serve-react-app",
+    "start": "nwb serve-react-app --port ${PORT:-3000}",
     "test": "nwb test-react",
     "test:coverage": "nwb test-react --coverage",
     "test:watch": "nwb test-react --server"
@@ -13,16 +13,17 @@
   "dependencies": {
     "es6-promisify": "^5.0.0",
     "google-url": "^0.0.4",
-    "kuhhandel": "file:../kuhhandel",
-    "kuhhandel-components": "file:../kuhhandel-components",
+    "kuhhandel": "^1.1.3",
+    "kuhhandel-components": "^1.0.0",
     "localforage": "^1.5.5",
     "react": "^16.2.0",
     "react-dom": "^16.2.0",
     "simple-peer": "^8.2.0"
   },
   "devDependencies": {
-    "nwb": "^0.20.0"
+    "nwb": "0.20.x"
   },
   "author": "Gorka",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": ""
 }
