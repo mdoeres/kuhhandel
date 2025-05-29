@@ -46,7 +46,7 @@ class Connect extends Component {
         >
           Open Remote Control
         </button>
-        {link && (
+        {link && link.length > 0 && (
           <div className="qr-container">
             <QRCodeSVG 
               value={link}
