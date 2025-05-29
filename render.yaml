@@ -15,7 +15,7 @@ services:
   - type: web
     name: kuhhandel-remote
     env: node
-    buildCommand: npm install && npm run bootstrap && npm run build:remote
+    buildCommand: npm install && npm run bootstrap && npm run build:components && npm run build:remote
     startCommand: npm run start:remote
     envVars:
       - key: NODE_ENV
