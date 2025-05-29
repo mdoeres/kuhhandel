@@ -17,7 +17,6 @@ const peerConfig = {
 }
 
 class App extends Component {
-
   state = { connected: false, error: false, id: null, props: null }
 
   async componentDidMount() {
@@ -30,27 +29,12 @@ class App extends Component {
       if (!signalDataParam) {
         throw new Error('No signal data');
       }
-
-      // Try to decode the signal data
-      try {
-        signalData = JSON.parse(atob(signalDataParam));
-        console.log('Successfully parsed signal data:', signalData);
-      } catch (decodeError) {
-        console.error('Error decoding signal data:', decodeError);
-        // Try URL-safe base64 if regular base64 fails
-        try {
-          const urlSafeSignalData = signalDataParam.replace(/-/g, '+').replace(/_/g, '/');
-          signalData = JSON.parse(atob(urlSafeSignalData));
-          console.log('Successfully parsed URL-safe signal data:', signalData);
-        } catch (urlSafeError) {
-          console.error('Error decoding URL-safe signal data:', urlSafeError);
-          throw new Error('Invalid signal data format');
-        }
-      }
+      signalData = JSON.parse(atob(signalDataParam));
+      console.log('Parsed signal data:', signalData);
     } catch (err) {
-      console.error('Error handling signal data:', err);
-      this.setState({ error: 'Invalid signal data format. Please try connecting again.' });
-      return;
+      console.error('Error parsing signal data:', err)
+      this.setState({ error: 'No signal data was provided' })
+      return
     }
     
     try {
@@ -59,7 +43,7 @@ class App extends Component {
       
       peer.on('signal', data => {
         console.log('Peer signal event:', data);
-        this.onSignal(data);
+        peer.signal(signalData);
       })
       
       peer.on('connect', () => {
@@ -128,13 +112,6 @@ class App extends Component {
       content = <div className="remote__connected">
         Connected! Waiting for game data...
       </div>
-    } else if (id) {
-      content = [
-        <label key="label">
-          Use this Id to connect the game to your controller:
-        </label>,
-        <div key="id" className="remote__id">{id}</div>
-      ]
     } else {
       content = <div className="remote__connecting">
         Connecting to game...
@@ -160,17 +137,6 @@ class App extends Component {
     } else {
       console.error('Cannot send: peer not connected')
     }
-  }
-
-  onSignal = data => {
-    const host = process.env.NODE_ENV === 'production'
-      ? 'kuhhandel-main.onrender.com'
-      : window.location.host
-    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
-    const signalData = btoa(JSON.stringify(data))
-    const connectUrl = `${protocol}://${host}?connect=${signalData}`
-    console.log('Generated connect URL:', connectUrl);
-    this.setState({ id: connectUrl })
   }
 }
 
