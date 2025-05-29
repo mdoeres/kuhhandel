@@ -8,7 +8,8 @@
   "scripts": {
     "bootstrap": "npx lerna bootstrap",
     "build": "npx lerna run build",
-    "build:components": "cd packages/kuhhandel-components && npm run build",
+    "build:core": "cd packages/kuhhandel && npm run build",
+    "build:components": "npm run build:core && cd packages/kuhhandel-components && npm run build",
     "build:main": "npm run build:components && cd packages/kuhhandel-webapp && npm run build",
     "build:remote": "npm run build:components && cd packages/kuhhandel-remote-control && npm run build",
     "start:main": "cd packages/kuhhandel-webapp && npm start",
