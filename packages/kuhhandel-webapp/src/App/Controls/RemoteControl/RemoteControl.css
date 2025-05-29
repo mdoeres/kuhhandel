@@ -23,12 +23,19 @@
   cursor: pointer;
   font-size: 14px;
   transition: background-color 0.3s;
+  text-decoration: none;
+  text-align: center;
+  display: inline-block;
 }
 
 .remote-button:hover {
   background-color: #45a049;
+  text-decoration: none;
+  color: white;
 }
 
 .remote-button:active {
   background-color: #3d8b40;
+  text-decoration: none;
+  color: white;
 }
