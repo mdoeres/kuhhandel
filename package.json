@@ -1,4 +1,15 @@
 {
+  "name": "kuhhandel",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "bootstrap": "lerna bootstrap",
+    "build": "lerna run build",
+    "build:main": "cd packages/kuhhandel-webapp && npm run build",
+    "build:remote": "cd packages/kuhhandel-remote-control && npm run build",
+    "start:main": "cd packages/kuhhandel-webapp && npm start",
+    "start:remote": "cd packages/kuhhandel-remote-control && npm start"
+  },
   "devDependencies": {
     "lerna": "^2.5.1"
   },
