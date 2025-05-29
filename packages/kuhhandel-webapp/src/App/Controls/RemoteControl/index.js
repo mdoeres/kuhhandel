@@ -19,9 +19,24 @@ class Connect extends Component {
   render() {
     const { link, connected, id } = this.props
     const placeholder = `${id} ${connected ? '✅' : ' - ' + link}`
-    return <form ref={f => this.form = f} onSubmit={this.onSubmit}>
-      <input className="connect" type="text" name="id" placeholder={placeholder} title={`Open ${link} in your smartphone`} />
-    </form>
+    const remoteUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://kuhhandel-remote.onrender.com'
+      : 'http://localhost:3001'
+    
+    return (
+      <div className="connect-container">
+        <button 
+          className="remote-button"
+          onClick={() => window.open(remoteUrl, '_blank')}
+          title="Open Remote Control in new tab"
+        >
+          Open Remote Control
+        </button>
+        <form ref={f => this.form = f} onSubmit={this.onSubmit}>
+          <input className="connect" type="text" name="id" placeholder={placeholder} title={`Open ${link} in your smartphone`} />
+        </form>
+      </div>
+    )
   }
 
   onSubmit = async e => {
