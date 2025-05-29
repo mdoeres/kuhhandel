@@ -19,15 +19,21 @@ class Connect extends Component {
   render() {
     const { link, connected, id } = this.props
     const placeholder = `${id} ${connected ? '✅' : ' - ' + link}`
-    const remoteUrl = process.env.NODE_ENV === 'production' 
-      ? 'https://kuhhandel-remote.onrender.com'
-      : 'http://localhost:3001'
     
     return (
       <div className="connect-container">
         <button 
           className="remote-button"
-          onClick={() => window.open(remoteUrl, '_blank')}
+          onClick={() => {
+            if (link) {
+              window.open(link, '_blank')
+            } else {
+              const remoteUrl = process.env.NODE_ENV === 'production' 
+                ? 'https://kuhhandel-remote.onrender.com'
+                : 'http://localhost:3002'
+              window.open(remoteUrl, '_blank')
+            }
+          }}
           title="Open Remote Control in new tab"
         >
           Open Remote Control
@@ -49,7 +55,6 @@ class Connect extends Component {
 }
 
 class Remote extends Component {
-
   state = {
     connected: false,
     link: '',
@@ -146,7 +151,8 @@ class Remote extends Component {
     const host = process.env.NODE_ENV === 'production' 
       ? 'kuhhandel-remote.onrender.com' 
       : window.location.host
-    const link = `http://${host}/remote?signalData=${btoa(JSON.stringify(signalData))}`
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+    const link = `${protocol}://${host}/remote?signalData=${btoa(JSON.stringify(signalData))}`
     console.log('Generated remote control link:', link)
     this.setState({ link })
   }
