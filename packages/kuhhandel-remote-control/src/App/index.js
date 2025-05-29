@@ -1,70 +1,91 @@
 import React, { Component } from 'react'
+import Peer from 'simple-peer'
 import { Control } from 'kuhhandel-components'
 import AI from './AI'
 import './App.css'
 
+let peer = null
+const peerConfig = {
+  trickle: false,
+  config: {
+    iceServers: [
+      {
+        urls: 'stun:stun.l.google.com:19302'
+      }
+    ]
+  }
+}
+
 class App extends Component {
+
   state = { connected: false, error: false, id: null, props: null }
-  ws = null
 
   async componentDidMount() {
+    let signalData
     try {
       const urlParams = new URLSearchParams(window.location.search);
-      const gameId = urlParams.get('gameId');
-      console.log('Received game ID:', gameId);
+      const signalDataParam = urlParams.get('signalData');
+      console.log('Received signal data param:', signalDataParam);
       
-      if (!gameId) {
-        throw new Error('No game ID provided');
+      if (!signalDataParam) {
+        throw new Error('No signal data');
       }
-
-      const wsUrl = process.env.NODE_ENV === 'production'
-        ? `wss://kuhhandel-main.onrender.com/ws/${gameId}`
-        : `ws://localhost:3002/ws/${gameId}`;
-
-      console.log('Connecting to WebSocket:', wsUrl);
-      this.ws = new WebSocket(wsUrl);
+      signalData = JSON.parse(atob(signalDataParam));
+      console.log('Parsed signal data:', signalData);
+    } catch (err) {
+      console.error('Error parsing signal data:', err)
+      this.setState({ error: 'No signal data was provided' })
+      return
+    }
+    
+    try {
+      console.log('Creating new peer with config:', peerConfig);
+      peer = new Peer(peerConfig)
       
-      this.ws.onopen = () => {
-        console.log('WebSocket connected');
-        this.setState({ connected: true });
-      };
+      peer.on('signal', data => {
+        console.log('Peer signal event:', data);
+        this.onSignal(data);
+      })
       
-      this.ws.onmessage = (event) => {
-        console.log('Received data:', event.data);
+      peer.on('connect', () => {
+        console.log('Peer connected');
+        this.setState({ connected: true })
+      })
+      
+      peer.on('data', data => {
+        console.log('Received data:', data);
         try {
-          const data = JSON.parse(event.data);
-          this.onProps(data);
+          const parsedData = JSON.parse(data);
+          this.onProps(parsedData);
         } catch (err) {
           console.error('Error parsing received data:', err);
         }
-      };
+      })
       
-      this.ws.onclose = () => {
-        console.log('WebSocket connection closed');
-        this.setState({ connected: false, error: 'Connection closed' });
-      };
+      peer.on('close', () => {
+        console.log('Peer connection closed');
+        this.setState({ connected: false, error: 'Connection closed' })
+      })
       
-      this.ws.onerror = (err) => {
-        console.error('WebSocket error:', err);
-        this.setState({ error: 'Connection error occurred' });
-      };
+      peer.on('error', err => {
+        console.error('Peer error:', err);
+        this.setState({ error: 'Connection error occurred' })
+      })
+
+      console.log('Signaling with data:', signalData);
+      peer.signal(signalData);
     } catch (err) {
-      console.error('Error setting up connection:', err);
+      console.error('Error setting up peer:', err);
       this.setState({ error: 'Failed to establish connection' });
     }
   }
 
-  componentWillUnmount() {
-    if (this.ws) {
-      this.ws.close();
-    }
-  }
-
   render() {
-    const { error, connected, props } = this.state
+    const { error, connected, id, props } = this.state
 
     if (props) {
       console.log('Rendering game controls with props:', props)
+      const { id } = props
       const overloadedProps = {
         ...props,
         onDraw: () => this.onSend({ method: 'onDraw' }),
@@ -92,6 +113,13 @@ class App extends Component {
       content = <div className="remote__connected">
         Connected! Waiting for game data...
       </div>
+    } else if (id) {
+      content = [
+        <label key="label">
+          Use this Id to connect the game to your controller:
+        </label>,
+        <div key="id" className="remote__id">{id}</div>
+      ]
     } else {
       content = <div className="remote__connecting">
         Connecting to game...
@@ -111,12 +139,20 @@ class App extends Component {
   }
 
   onSend = opts => {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+    if (peer && peer.connected) {
       console.log('Sending action:', opts)
-      this.ws.send(JSON.stringify(opts))
+      peer.send(JSON.stringify(opts))
     } else {
-      console.error('Cannot send: WebSocket not connected')
+      console.error('Cannot send: peer not connected')
     }
+  }
+
+  onSignal = data => {
+    const host = process.env.NODE_ENV === 'production'
+      ? 'kuhhandel-main.onrender.com'
+      : window.location.host
+    const connectUrl = `http://${host}?connect=${btoa(JSON.stringify(data))}`
+    this.setState({ id: connectUrl })
   }
 }
 
