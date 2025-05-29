@@ -148,11 +148,11 @@ class Remote extends Component {
   }
 
   onSignal = signalData => {
-    const host = process.env.NODE_ENV === 'production' 
-      ? 'kuhhandel-remote.onrender.com/remote' 
-      : window.location.host
-    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
-    const link = `${protocol}://${host}?signalData=${btoa(JSON.stringify(signalData))}`
+    const baseUrl = process.env.NODE_ENV === 'production' 
+      ? 'https://kuhhandel-remote.onrender.com/remote'
+      : `http://${window.location.host}`
+    const signalDataStr = btoa(JSON.stringify(signalData))
+    const link = `${baseUrl}?signalData=${signalDataStr}`
     console.log('Generated remote control link:', link)
     this.setState({ link })
   }
