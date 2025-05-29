@@ -6,13 +6,20 @@ import './App.css'
 
 let peer = null
 const peerConfig = {
-  trickle: false,
+  trickle: true,
   config: {
     iceServers: [
       {
-        urls: 'stun:stun.l.google.com:19302'
+        urls: [
+          'stun:stun.l.google.com:19302',
+          'stun:stun1.l.google.com:19302',
+          'stun:stun2.l.google.com:19302',
+          'stun:stun3.l.google.com:19302',
+          'stun:stun4.l.google.com:19302'
+        ]
       }
-    ]
+    ],
+    iceCandidatePoolSize: 10
   }
 }
 
@@ -122,7 +129,7 @@ class App extends Component {
       ]
     } else {
       content = <div className="remote__connecting">
-        Connecting to game...
+        Establishing connection...
       </div>
     }
 

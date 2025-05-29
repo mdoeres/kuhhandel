@@ -1,17 +1,25 @@
 import React, { Component } from 'react'
 import { Control } from 'kuhhandel-components'
 import Peer from 'simple-peer'
+import { QRCodeSVG } from 'qrcode.react'
 import './RemoteControl.css'
 
 const peerConfig = {
   initiator: true,
-  trickle: false,
+  trickle: true,
   config: {
     iceServers: [
       {
-        urls: 'stun:stun.l.google.com:19302'
+        urls: [
+          'stun:stun.l.google.com:19302',
+          'stun:stun1.l.google.com:19302',
+          'stun:stun2.l.google.com:19302',
+          'stun:stun3.l.google.com:19302',
+          'stun:stun4.l.google.com:19302'
+        ]
       }
-    ]
+    ],
+    iceCandidatePoolSize: 10
   }
 }
 
@@ -38,6 +46,18 @@ class Connect extends Component {
         >
           Open Remote Control
         </button>
+        {link && (
+          <div className="qr-container">
+            <QRCodeSVG 
+              value={link}
+              size={200}
+              level="H"
+              includeMargin={true}
+              title="Scan to open remote control"
+            />
+            <p className="qr-hint">Scan QR code with your phone</p>
+          </div>
+        )}
         <form ref={f => this.form = f} onSubmit={this.onSubmit}>
           <input className="connect" type="text" name="id" placeholder={placeholder} title={`Open ${link} in your smartphone`} />
         </form>
@@ -89,8 +109,12 @@ class Remote extends Component {
         method: 'init',
         payload: this.props
       }
-      peer.send(JSON.stringify(gameState))
-      this.setState({ connected: true })
+      try {
+        peer.send(JSON.stringify(gameState))
+        this.setState({ connected: true })
+      } catch (err) {
+        console.error('Error sending initial props:', err)
+      }
     })
     peer.on('data', data => {
       console.log('Received data from peer:', data)
