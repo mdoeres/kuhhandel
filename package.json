@@ -6,17 +6,15 @@
     "node": "18.x"
   },
   "scripts": {
-    "bootstrap": "lerna bootstrap",
-    "build": "lerna run build",
+    "bootstrap": "npx lerna bootstrap",
+    "build": "npx lerna run build",
     "build:main": "cd packages/kuhhandel-webapp && npm run build",
     "build:remote": "cd packages/kuhhandel-remote-control && npm run build",
     "start:main": "cd packages/kuhhandel-webapp && npm start",
     "start:remote": "cd packages/kuhhandel-remote-control && npm start"
   },
-  "devDependencies": {
-    "lerna": "^2.5.1"
-  },
   "dependencies": {
+    "lerna": "^2.5.1",
     "shuffle-array": "^1.0.1"
   }
 }

@@ -2,7 +2,7 @@ services:
   - type: web
     name: kuhhandel-main
     env: node
-    buildCommand: npm install -g lerna && npm install && npm run bootstrap && npm run build:main
+    buildCommand: npm install && npm run bootstrap && npm run build:main
     startCommand: npm run start:main
     envVars:
       - key: NODE_ENV
@@ -15,7 +15,7 @@ services:
   - type: web
     name: kuhhandel-remote
     env: node
-    buildCommand: npm install -g lerna && npm install && npm run bootstrap && npm run build:remote
+    buildCommand: npm install && npm run bootstrap && npm run build:remote
     startCommand: npm run start:remote
     envVars:
       - key: NODE_ENV
