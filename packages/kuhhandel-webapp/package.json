@@ -13,8 +13,8 @@
   "dependencies": {
     "es6-promisify": "^5.0.0",
     "google-url": "^0.0.4",
-    "kuhhandel": "^1.0.0",
-    "kuhhandel-components": "^1.0.0",
+    "kuhhandel": "file:../kuhhandel",
+    "kuhhandel-components": "file:../kuhhandel-components",
     "localforage": "^1.5.5",
     "react": "^16.2.0",
     "react-dom": "^16.2.0",

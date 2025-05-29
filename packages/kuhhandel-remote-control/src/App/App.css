@@ -5,6 +5,7 @@
   align-items: center;
   justify-content: center;
   text-align: center;
+  padding: 20px;
 }
 
 .remote__id{
@@ -12,6 +13,33 @@
   border: 1px solid #CCC;
   padding: 1em;
   letter-spacing: 2px;
+  background: #f0f0f0;
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 4px;
+  font-family: monospace;
+  word-break: break-all;
 }
 
-.remote__error{}
+.remote__error {
+  color: #ff0000;
+  font-weight: bold;
+  margin: 20px 0;
+}
+
+.remote__connected {
+  color: #00aa00;
+  font-weight: bold;
+  margin: 20px 0;
+}
+
+.remote__connecting {
+  color: #666666;
+  margin: 20px 0;
+}
+
+label {
+  display: block;
+  margin-bottom: 10px;
+  color: #666666;
+}

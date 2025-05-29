@@ -1,19 +1,24 @@
 import React, { Component } from 'react'
 import { Control } from 'kuhhandel-components'
 import Peer from 'simple-peer'
-import GoogleURL from 'google-url'
-import promisify from 'es6-promisify'
 import './RemoteControl.css'
 
-const googleUrl = new GoogleURL({ key: GOOGLE_APIKEY })
-const shorten = promisify(googleUrl.shorten.bind(googleUrl))
-const expand = promisify(googleUrl.expand.bind(googleUrl))
-const peerConfig = { initiator: true, trickle: false }
+const peerConfig = {
+  initiator: true,
+  trickle: false,
+  config: {
+    iceServers: [
+      {
+        urls: 'stun:stun.l.google.com:19302'
+      }
+    ]
+  }
+}
 
 class Connect extends Component {
   render() {
     const { link, connected, id } = this.props
-    const placeholder = `${id} ${connected ? '✅' : ' - ' + link.substr(15)}`
+    const placeholder = `${id} ${connected ? '✅' : ' - ' + link}`
     return <form ref={f => this.form = f} onSubmit={this.onSubmit}>
       <input className="connect" type="text" name="id" placeholder={placeholder} title={`Open ${link} in your smartphone`} />
     </form>
@@ -22,8 +27,7 @@ class Connect extends Component {
   onSubmit = async e => {
     e.preventDefault()
     const id = this.form.id.value
-    const longUrl = await expand(`https://goo.gl/${id}`)
-    const data = JSON.parse(atob(longUrl.split('?connect=')[1]))
+    const data = JSON.parse(atob(id.split('?connect=')[1]))
     this.props.onSubmit(data)
     this.form.reset()
   }
@@ -59,29 +63,76 @@ class Remote extends Component {
     const { peer } = this.state
     peer.once('signal', this.onSignal)
     peer.on('connect', () => {
-      setTimeout(() => peer.send(JSON.stringify(this.props)), 100)
+      console.log('Peer connected, sending initial props')
+      const gameState = {
+        ...this.props,
+        method: 'init',
+        payload: this.props
+      }
+      peer.send(JSON.stringify(gameState))
       this.setState({ connected: true })
     })
-    peer.on('data', data => this.onData(JSON.parse(data)))
-    peer.on('close', () => this.setState({ link: '', connected: false, peer: new Peer(peerConfig) }, this.initPeer))
+    peer.on('data', data => {
+      console.log('Received data from peer:', data)
+      try {
+        const parsedData = JSON.parse(data)
+        if (parsedData.method) {
+          this.onData(parsedData)
+        }
+      } catch (err) {
+        console.error('Error parsing received data:', err)
+      }
+    })
+    peer.on('close', () => {
+      console.log('Peer connection closed, reinitializing')
+      this.setState({ link: '', connected: false, peer: new Peer(peerConfig) }, this.initPeer)
+    })
+    peer.on('error', err => {
+      console.error('Peer error:', err)
+      this.setState({ link: '', connected: false, peer: new Peer(peerConfig) }, this.initPeer)
+    })
   }
 
   onConnect = data => {
-    this.state.peer.signal(data)
+    console.log('Received connection data:', data)
+    try {
+      if (this.state.peer && !this.state.peer.destroyed) {
+        this.state.peer.signal(data)
+      } else {
+        console.log('Creating new peer for connection')
+        const newPeer = new Peer(peerConfig)
+        newPeer.signal(data)
+        this.setState({ peer: newPeer }, this.initPeer)
+      }
+    } catch (err) {
+      console.error('Error handling connection:', err)
+      this.setState({ link: '', connected: false, peer: new Peer(peerConfig) }, this.initPeer)
+    }
   }
 
   onData = data => {
+    console.log('Received data:', data)
     this.props[data.method](data.payload)
   }
 
   onSendProps = props => {
-    if (this.state.peer.connected) {
-      this.state.peer.send(JSON.stringify(props))
+    if (this.state.peer && this.state.peer.connected) {
+      console.log('Sending updated props:', props)
+      const gameState = {
+        ...props,
+        method: 'update',
+        payload: props
+      }
+      this.state.peer.send(JSON.stringify(gameState))
     }
   }
 
-  onSignal = async signalData => {
-    const link = await shorten(`${REMOTE_CONTROL_URL}?signalData=${btoa(JSON.stringify(signalData))}`)
+  onSignal = signalData => {
+    const host = process.env.NODE_ENV === 'production' 
+      ? 'kuhhandel-remote.onrender.com' 
+      : window.location.host
+    const link = `http://${host}/remote?signalData=${btoa(JSON.stringify(signalData))}`
+    console.log('Generated remote control link:', link)
     this.setState({ link })
   }
 }

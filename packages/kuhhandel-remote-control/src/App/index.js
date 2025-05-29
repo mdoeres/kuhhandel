@@ -1,15 +1,20 @@
 import React, { Component } from 'react'
-import qmark from 'qmark'
 import Peer from 'simple-peer'
-import GoogleURL from 'google-url'
-import promisify from 'es6-promisify'
 import { Control } from 'kuhhandel-components'
 import AI from './AI'
 import './App.css'
 
 let peer = null
-const googleUrl = new GoogleURL({ key: GOOGLE_APIKEY })
-const shorten = promisify(googleUrl.shorten.bind(googleUrl))
+const peerConfig = {
+  trickle: false,
+  config: {
+    iceServers: [
+      {
+        urls: 'stun:stun.l.google.com:19302'
+      }
+    ]
+  }
+}
 
 class App extends Component {
 
@@ -18,24 +23,68 @@ class App extends Component {
   async componentDidMount() {
     let signalData
     try {
-      signalData = atob(qmark('signalData'))
+      const urlParams = new URLSearchParams(window.location.search);
+      const signalDataParam = urlParams.get('signalData');
+      console.log('Received signal data param:', signalDataParam);
+      
+      if (!signalDataParam) {
+        throw new Error('No signal data');
+      }
+      signalData = JSON.parse(atob(signalDataParam));
+      console.log('Parsed signal data:', signalData);
     } catch (err) {
-      console.log('Error: ', err)
+      console.error('Error parsing signal data:', err)
       this.setState({ error: 'No signal data was provided' })
       return
     }
-    peer = new Peer({ trickle: false })
-    peer.signal(signalData)
-    peer.on('signal', this.onSignal)
-    peer.on('data', data => this.onProps(JSON.parse(data)))
-    peer.on('connect', () => this.setState({ connected: true }))
-    peer.on('close', () => this.setState({ connected: false }))
+    
+    try {
+      console.log('Creating new peer with config:', peerConfig);
+      peer = new Peer(peerConfig)
+      
+      peer.on('signal', data => {
+        console.log('Peer signal event:', data);
+        this.onSignal(data);
+      })
+      
+      peer.on('connect', () => {
+        console.log('Peer connected');
+        this.setState({ connected: true })
+      })
+      
+      peer.on('data', data => {
+        console.log('Received data:', data);
+        try {
+          const parsedData = JSON.parse(data);
+          this.onProps(parsedData);
+        } catch (err) {
+          console.error('Error parsing received data:', err);
+        }
+      })
+      
+      peer.on('close', () => {
+        console.log('Peer connection closed');
+        this.setState({ connected: false, error: 'Connection closed' })
+      })
+      
+      peer.on('error', err => {
+        console.error('Peer error:', err);
+        this.setState({ error: 'Connection error occurred' })
+      })
+
+      console.log('Signaling with data:', signalData);
+      peer.signal(signalData);
+    } catch (err) {
+      console.error('Error setting up peer:', err);
+      this.setState({ error: 'Failed to establish connection' });
+    }
   }
 
   render() {
     const { error, connected, id, props } = this.state
 
     if (props) {
+      console.log('Rendering game controls with props:', props)
       const { id } = props
       const overloadedProps = {
         ...props,
@@ -58,17 +107,23 @@ class App extends Component {
 
     if (error) {
       content = <div className="remote__error">
-        Please use the link provided in the game’s main window
+        {error}
       </div>
-    }
-
-    if (!connected && id) {
+    } else if (connected) {
+      content = <div className="remote__connected">
+        Connected! Waiting for game data...
+      </div>
+    } else if (id) {
       content = [
         <label key="label">
           Use this Id to connect the game to your controller:
         </label>,
         <div key="id" className="remote__id">{id}</div>
       ]
+    } else {
+      content = <div className="remote__connecting">
+        Connecting to game...
+      </div>
     }
 
     return <div className="remote">
@@ -76,17 +131,28 @@ class App extends Component {
     </div>
   }
 
-  onProps = props => {
-    this.setState({ props })
+  onProps = data => {
+    console.log('Received game data:', data)
+    if (data.method === 'init' || data.method === 'update') {
+      this.setState({ props: data.payload })
+    }
   }
 
   onSend = opts => {
-    peer.send(JSON.stringify(opts))
+    if (peer && peer.connected) {
+      console.log('Sending action:', opts)
+      peer.send(JSON.stringify(opts))
+    } else {
+      console.error('Cannot send: peer not connected')
+    }
   }
 
-  onSignal = async data => {
-    const shortUrl = await shorten(`${HOST_URL}?connect=${btoa(JSON.stringify(data))}`)
-    this.setState({ id: shortUrl.substr(15) })
+  onSignal = data => {
+    const host = process.env.NODE_ENV === 'production'
+      ? 'kuhhandel-main.onrender.com'
+      : window.location.host
+    const connectUrl = `http://${host}?connect=${btoa(JSON.stringify(data))}`
+    this.setState({ id: connectUrl })
   }
 }
 

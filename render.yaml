@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: kuhhandel-main
+    env: node
+    buildCommand: npm install && npm run bootstrap && npm run build
+    startCommand: cd packages/kuhhandel-webapp && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+
+  - type: web
+    name: kuhhandel-remote
+    env: node
+    buildCommand: npm install && npm run bootstrap && cd packages/kuhhandel-remote-control && npm install
+    startCommand: cd packages/kuhhandel-remote-control && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001 
