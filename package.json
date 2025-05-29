@@ -2,6 +2,9 @@
   "name": "kuhhandel",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": "18.x"
+  },
   "scripts": {
     "bootstrap": "lerna bootstrap",
     "build": "lerna run build",
