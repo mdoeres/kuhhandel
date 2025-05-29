@@ -5,7 +5,7 @@
   "scripts": {
     "build": "nwb build-react-app",
     "clean": "nwb clean-app",
-    "start": "nwb serve-react-app --port ${PORT:-3001}"
+    "start": "nwb serve-react-app --port ${PORT:-3001} --host 0.0.0.0"
   },
   "dependencies": {
     "es6-promisify": "^5.0.0",
